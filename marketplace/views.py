@@ -76,6 +76,7 @@ def product_list(request):
     """
     if request.method == 'GET':
         product = Product.objects.all()
+        category = request.query_params.get('category')
         serializer = ProductSerializer(product, many=True)
         return Response(serializer.data)
 
