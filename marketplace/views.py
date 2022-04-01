@@ -9,7 +9,6 @@ from rest_framework import viewsets
 from rest_framework import permissions
 from .serializers import CategorySerializer, ProductSerializer
 
-
 # class CategoryViewSet(viewsets.ModelViewSet):
 #     """
 #     API endpoint that allows users to be viewed or edited.
@@ -76,7 +75,17 @@ def product_list(request):
     """
     if request.method == 'GET':
         product = Product.objects.all()
-        category = request.query_params.get('category')
+        category = int(request.query_params.get('category'))
+        sort = request.query_params.get('sort')
+
+        if category:
+            if category > 0:
+                product = product.filter(category=category)
+            else:
+                category = abs(category)
+                product = product.exclude(category=category)
+            if sort:
+                product = product.order_by(sort)
         serializer = ProductSerializer(product, many=True)
         return Response(serializer.data)
 
