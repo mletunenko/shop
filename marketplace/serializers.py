@@ -35,10 +35,11 @@ class BucketProductSerializer(serializers.ModelSerializer):
     price = serializers.DecimalField(source='product.price', max_digits=8,
                                      decimal_places=2)
     best_sale = SaleSerializer(source='product.best_sale')
+    price_with_discount = serializers.DecimalField(source='product.price_with_discount', max_digits=8, decimal_places=2)
 
     class Meta:
         model = BucketProduct
-        fields = ['id', 'name', 'number', 'price', 'best_sale']
+        fields = ['id', 'name', 'number', 'price', 'best_sale', 'price_with_discount']
 
 
 class BucketProductAddSerializer(serializers.ModelSerializer):

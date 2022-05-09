@@ -97,9 +97,6 @@ def bucket_total(request):
 
     serializer = BucketProductSerializer(bp_qs, many=True)
 
-    # for product in bp.product:
-    #     product = get_sales(product)
-
     total = 0
     total_with_discount = 0
     for bp in bp_qs:
@@ -127,7 +124,8 @@ def bucketproduct_add(request):
 
     bp_qs = BucketProduct.objects.filter(
         bucket__user=request.user).select_related('product')
-
+    for elem in bp_qs:
+        elem.product = get_sales(elem.product)
     total = 0
     total_with_discount = 0
     for bp in bp_qs:
@@ -138,6 +136,7 @@ def bucketproduct_add(request):
         'total_with_discount': total_with_discount,
 
     }
+
     return Response(response_data, status=status.HTTP_200_OK)
 
 
@@ -145,23 +144,26 @@ def bucketproduct_add(request):
 @permission_classes([IsAuthenticated])
 def product_update(request, pk):
     data = request.data
-    instance = BucketProduct.objects.get(product_id=pk,
-                                         bucket_id=Bucket.objects.get(
-                                             user=request.user).id)
+    instance = BucketProduct.objects.get(product_id=pk, bucket_id=Bucket.objects.get(user=request.user).id)
     serializer = BucketProductUpdateProduct(instance, data=data)
     serializer.is_valid(True)
     serializer.save()
 
     bp_qs = BucketProduct.objects.filter(
         bucket__user=request.user).select_related('product')
-
+    for elem in bp_qs:
+        elem.product = get_sales(elem.product)
     total = 0
+    total_with_discount = 0
     for bp in bp_qs:
         total += bp.number * bp.product.price
-
+        total_with_discount += bp.number * bp.product.price_with_discount
     response_data = {
-        'total': total
+        'total': total,
+        'total_with_discount': total_with_discount,
+
     }
+
     return Response(response_data, status=status.HTTP_200_OK)
 
 
@@ -175,11 +177,17 @@ def product_delete(request, pk):
     bp_qs = BucketProduct.objects.filter(
         bucket__user=request.user).select_related('product')
 
+    for elem in bp_qs:
+        elem.product = get_sales(elem.product)
     total = 0
+    total_with_discount = 0
     for bp in bp_qs:
         total += bp.number * bp.product.price
-
+        total_with_discount += bp.number * bp.product.price_with_discount
     response_data = {
-        'total': total
+        'total': total,
+        'total_with_discount': total_with_discount,
+
     }
+
     return Response(response_data, status=status.HTTP_200_OK)
