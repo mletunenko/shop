@@ -38,8 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
-    "debug_toolbar",
+    'django_celery_beat',
+    'debug_toolbar',
 ]
 
 MIDDLEWARE = [
@@ -54,9 +54,9 @@ MIDDLEWARE = [
     "debug_toolbar.middleware.DebugToolbarMiddleware",
 ]
 
-INTERNAL_IPS = [
-    "127.0.0.1",
-]
+# INTERNAL_IPS = [
+#     "127.0.0.1",
+# ]
 
 ROOT_URLCONF = 'shop.urls'
 
@@ -88,6 +88,7 @@ DATABASES = {
         'USER': 'dbuser',
         'PASSWORD': 'dbpassword',
         'HOST': '127.0.0.1',
+        # 'HOST': 'db',
         'PORT': '5432',
     }
 }
@@ -137,3 +138,9 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
     ]
 }
+CELERY_TIMEZONE = 'UTC'
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
+CELERY_BROKER_URL = 'redis://127.0.0.1:6379/1'
+
+from shop import celery_app

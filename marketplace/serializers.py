@@ -1,37 +1,44 @@
 from rest_framework import serializers
-from .models import Category, Product, Bucket, BucketProduct
+from .models import Category, Product, Bucket, BucketProduct, Sale
 
 
 class CategorySerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(read_only=True)
-    name = serializers.CharField(max_length=50)
-    parent = serializers.CharField(max_length=50, allow_null=True,
-                                   allow_blank=True)
-
     class Meta:
         model = Category
         fields = ['id', 'name', 'parent']
 
 
+class SaleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Sale
+        fields = ['id', 'name', 'discount']
+
+
 class ProductSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(read_only=True)
-    name = serializers.CharField(max_length=50)
-    price = serializers.DecimalField(max_digits=8, decimal_places=2)
-    description = serializers.CharField()
-    category = serializers.CharField(source='category.name')
+    categories = serializers.SlugRelatedField(
+        many=True,
+        read_only=True,
+        slug_field='name'
+    )
+    best_sale = SaleSerializer()
+    price_with_discount = serializers.DecimalField(max_digits=8, decimal_places=2)
 
     class Meta:
         model = Product
-        fields = ['id', 'name', 'price', 'description', 'category']
+        fields = ['id', 'name', 'price', 'description', 'categories',
+                  'price_with_discount', 'best_sale']
 
 
 class BucketProductSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='product_id')
     name = serializers.CharField(source='product.name')
+    price = serializers.DecimalField(source='product.price', max_digits=8,
+                                     decimal_places=2)
+    best_sale = SaleSerializer(source='product.best_sale')
 
     class Meta:
         model = BucketProduct
-        fields = ['id', 'name', 'number']
+        fields = ['id', 'name', 'number', 'price', 'best_sale']
 
 
 class BucketProductAddSerializer(serializers.ModelSerializer):

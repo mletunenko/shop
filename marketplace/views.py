@@ -1,4 +1,7 @@
+from typing import Iterable
+
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework import status
 from rest_framework.decorators import api_view
@@ -6,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from marketplace.models import Category, Bucket, BucketProduct
 from marketplace.serializers import CategorySerializer
-from marketplace.models import Category, Product
+from marketplace.models import Category, Product, Sale
 from rest_framework import viewsets
 from rest_framework import permissions
 from .serializers import CategorySerializer, ProductSerializer, \
@@ -14,120 +17,70 @@ from .serializers import CategorySerializer, ProductSerializer, \
     BucketProductUpdateProduct
 
 
-# class CategoryViewSet(viewsets.ModelViewSet):
-#     """
-#     API endpoint that allows users to be viewed or edited.
-#     """
-#     queryset = Category.objects.all()
-#     serializer_class = CategorySerializer
-#     permission_classes = [permissions.IsAuthenticated]
-#
-# class ProductViewSet(viewsets.ModelViewSet):
-#     """
-#     API endpoint that allows users to be viewed or edited.
-#     """
-#     queryset = Product.objects.all()
-#     serializer_class = ProductSerializer
-#     permission_classes = [permissions.IsAuthenticated]
+def get_sales(product_list):
+    sales = Sale.objects.filter(start_date__lte=timezone.now(),
+                                end_date__gte=timezone.now())
 
-@api_view(['GET', 'POST'])
-def category_list(request):
-    """
-    List all code snippets, or create a new snippet.
-    """
-    if request.method == 'GET':
-        category = Category.objects.all()
-        serializer = CategorySerializer(category, many=True)
+    was_single = False
+    if not isinstance(product_list, Iterable):
+        product_list = [product_list]
+        was_single = True
+
+    for product in product_list:
+        best_sale = None
+        for sale in sales:
+            has_categories = set(product.categories.values_list('id', flat=True)).intersection(
+                set(sale.categories.values_list('id', flat=True)))
+            if sale.products.filter(
+                    id=product.id).exists() or has_categories:
+                if not best_sale:
+                    best_sale = sale
+                    continue
+                if sale.discount > best_sale.discount:
+                    best_sale = sale
+        product.best_sale = best_sale
+        if best_sale:
+            product.price_with_discount = product.price * (1 - best_sale.discount)
+        else:
+            product.price_with_discount = product.price
+    if was_single:
+        return product_list[0]
+    return product_list
+
+
+class CategoryViewSet(viewsets.ModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
-    elif request.method == 'POST':
-        serializer = CategorySerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class ProductViewSet(viewsets.ModelViewSet):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
 
-@api_view(['GET', 'PUT', 'DELETE'])
-def category_detail(request, pk):
-    """
-    Retrieve, update or delete a code snippet.
-    """
-    try:
-        category = Category.objects.get(pk=pk)
-    except Category.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
 
-    if request.method == 'GET':
-        serializer = CategorySerializer(category)
+        queryset = get_sales(queryset)
+        serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-    elif request.method == 'PUT':
-        serializer = CategorySerializer(category, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance = get_sales(instance)
+        serializer = self.get_serializer(instance)
+        # if discount:
+        #     serializer.data['price'] = instance.price * (1 - discount / 100)
 
-    elif request.method == 'DELETE':
-        category.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-@api_view(['GET', 'POST'])
-def product_list(request):
-    """
-    List all code snippets, or create a new snippet.
-    """
-    if request.method == 'GET':
-        product = Product.objects.all()
-        category = request.query_params.get('category')
-        sort = request.query_params.get('sort')
-
-        if category:
-            category = int(category)
-            if category > 0:
-                product = product.filter(category=category)
-            else:
-                category = abs(category)
-                product = product.exclude(category=category)
-            if sort:
-                product = product.order_by(sort)
-        serializer = ProductSerializer(product, many=True)
         return Response(serializer.data)
-
-    elif request.method == 'POST':
-        serializer = ProductSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(['GET', 'PUT', 'DELETE'])
-def product_detail(request, pk):
-    """
-    Retrieve, update or delete a code snippet.
-    """
-    try:
-        product = Product.objects.get(pk=pk)
-    except product.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
-
-    if request.method == 'GET':
-        serializer = ProductSerializer(product)
-        return Response(serializer.data)
-
-    elif request.method == 'PUT':
-        serializer = ProductSerializer(product, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    elif request.method == 'DELETE':
-        product.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['GET'])
@@ -139,14 +92,23 @@ def bucket_total(request):
 
     bp_qs = BucketProduct.objects.filter(
         bucket__user=request.user).select_related('product')
+    for elem in bp_qs:
+        elem.product = get_sales(elem.product)
+
     serializer = BucketProductSerializer(bp_qs, many=True)
 
+    # for product in bp.product:
+    #     product = get_sales(product)
+
     total = 0
+    total_with_discount = 0
     for bp in bp_qs:
         total += bp.number * bp.product.price
+        total_with_discount += bp.number * bp.product.price_with_discount
 
     response_data = {
         'total': total,
+        'total_with_discount': total_with_discount,
         'products': serializer.data,
     }
     return Response(response_data)
@@ -167,11 +129,14 @@ def bucketproduct_add(request):
         bucket__user=request.user).select_related('product')
 
     total = 0
+    total_with_discount = 0
     for bp in bp_qs:
         total += bp.number * bp.product.price
-
+        total_with_discount += bp.number * bp.product.price_with_discount
     response_data = {
-        'total': total
+        'total': total,
+        'total_with_discount': total_with_discount,
+
     }
     return Response(response_data, status=status.HTTP_200_OK)
 

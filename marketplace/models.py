@@ -2,7 +2,7 @@ import datetime
 from django.contrib import admin
 from django.db import models
 from django.utils import timezone
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 
 
 class Category(models.Model):
@@ -20,7 +20,7 @@ class Product(models.Model):
     name = models.CharField(max_length=50)
     price = models.DecimalField(max_digits=8, decimal_places=2)
     description = models.TextField()
-    categorys = models.ManyToManyField(Category, related_name='products')
+    categories = models.ManyToManyField(Category)
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
 
@@ -44,3 +44,16 @@ class BucketProduct(models.Model):
 
     class Meta:
         unique_together = ('product', 'bucket')
+
+
+class Sale(models.Model):
+    name = models.CharField(max_length=100)
+    announcement_date = models.DateTimeField()
+    start_date = models.DateTimeField()
+    end_date = models.DateTimeField()
+    was_announced = models.BooleanField()
+    discount = models.DecimalField(max_digits=5, decimal_places=2)
+    products = models.ManyToManyField(Product, blank=True)
+    categories = models.ManyToManyField(Category, blank=True)
+    users = models.ManyToManyField(User, blank=True)
+    groups = models.ManyToManyField(Group, blank=True)
