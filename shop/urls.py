@@ -8,9 +8,7 @@ router = routers.DefaultRouter()
 urlpatterns = [
     path('', include('marketplace.urls')),
     path('admin/', admin.site.urls),
-    path('api-auth/',
-         include('rest_framework.urls', namespace='rest_framework')),
+    # path('', include('rest_framework.urls', namespace='rest_framework')),
     path('', include('marketplace_auth.urls')),
-
-    path('__debug__/', include('debug_toolbar.urls')),
+    # path('__debug__/', include('debug_toolbar.urls')),
 ]

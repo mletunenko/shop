@@ -12,17 +12,19 @@ def user_registration(request):
     serializer = UserSerializer(data=data)
     serializer.is_valid(True)
     serializer.save()
+    serializer.instance.set_password(data['password'])
+    serializer.instance.save()
     return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 @api_view(['POST'])
 def login_view(request):
-    email = request.data['email']
+    username = request.data['username']
     password = request.data['password']
-    user = authenticate(request, email=email, password=password)
+    user = authenticate(request, username=username, password=password)
     if user is not None:
         login(request, user)
-        return Response()
+        return Response(status=status.HTTP_200_OK)
     else:
         data = {
             'response': 'Invalid login/password'

@@ -29,7 +29,6 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 INSTALLED_APPS = [
-    'marketplace_auth',
     'rest_framework',
     'marketplace',
     'django.contrib.admin',
@@ -40,6 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_celery_beat',
     'debug_toolbar',
+    'marketplace_auth',
+
 ]
 
 MIDDLEWARE = [
@@ -142,5 +143,3 @@ CELERY_TIMEZONE = 'UTC'
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
 CELERY_BROKER_URL = 'redis://127.0.0.1:6379/1'
-
-from shop import celery_app

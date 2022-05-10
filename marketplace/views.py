@@ -15,11 +15,27 @@ from rest_framework import permissions
 from .serializers import CategorySerializer, ProductSerializer, \
     BucketProductSerializer, BucketProductAddSerializer, \
     BucketProductUpdateProduct
+from django.db.models import Q
 
 
-def get_sales(product_list):
-    sales = Sale.objects.filter(start_date__lte=timezone.now(),
-                                end_date__gte=timezone.now())
+def sale_is_open(sale):
+    no_users = sale.users.values_list('id', flat=True) is []
+    no_groups = sale.groups.values_list('id', flat=True) is []
+    if no_users and no_groups:
+        return True
+    return False
+
+
+def user_in_sale(sale, user):
+    has_user = set(sale.users.values_list('id', flat=True)).intersection(set([user.id]))
+    has_groups = set(sale.groups.values_list('id', flat=True)).intersection(set([user.groups]))
+    if has_user or has_groups:
+        return False
+    return True
+
+
+def get_sales(product_list, user):
+    sales = Sale.objects.filter(start_date__lte=timezone.now(), end_date__gte=timezone.now())
 
     was_single = False
     if not isinstance(product_list, Iterable):
@@ -29,15 +45,16 @@ def get_sales(product_list):
     for product in product_list:
         best_sale = None
         for sale in sales:
-            has_categories = set(product.categories.values_list('id', flat=True)).intersection(
-                set(sale.categories.values_list('id', flat=True)))
-            if sale.products.filter(
-                    id=product.id).exists() or has_categories:
-                if not best_sale:
-                    best_sale = sale
-                    continue
-                if sale.discount > best_sale.discount:
-                    best_sale = sale
+            if sale_is_open(sale) or user_in_sale(sale, user):
+                has_categories = set(product.categories.values_list('id', flat=True)).intersection(
+                    set(sale.categories.values_list('id', flat=True)))
+                if sale.products.filter(
+                        id=product.id).exists() or has_categories:
+                    if not best_sale:
+                        best_sale = sale
+                        continue
+                    if sale.discount > best_sale.discount:
+                        best_sale = sale
         product.best_sale = best_sale
         if best_sale:
             product.price_with_discount = product.price * (1 - best_sale.discount)
@@ -69,17 +86,14 @@ class ProductViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
 
-        queryset = get_sales(queryset)
+        queryset = get_sales(queryset, request.user)
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
-        instance = get_sales(instance)
+        instance = get_sales(instance, request.user)
         serializer = self.get_serializer(instance)
-        # if discount:
-        #     serializer.data['price'] = instance.price * (1 - discount / 100)
-
         return Response(serializer.data)
 
 
@@ -93,7 +107,7 @@ def bucket_total(request):
     bp_qs = BucketProduct.objects.filter(
         bucket__user=request.user).select_related('product')
     for elem in bp_qs:
-        elem.product = get_sales(elem.product)
+        elem.product = get_sales(elem.product, request.user)
 
     serializer = BucketProductSerializer(bp_qs, many=True)
 
@@ -125,7 +139,7 @@ def bucketproduct_add(request):
     bp_qs = BucketProduct.objects.filter(
         bucket__user=request.user).select_related('product')
     for elem in bp_qs:
-        elem.product = get_sales(elem.product)
+        elem.product = get_sales(elem.product, request.user)
     total = 0
     total_with_discount = 0
     for bp in bp_qs:
@@ -152,7 +166,7 @@ def product_update(request, pk):
     bp_qs = BucketProduct.objects.filter(
         bucket__user=request.user).select_related('product')
     for elem in bp_qs:
-        elem.product = get_sales(elem.product)
+        elem.product = get_sales(elem.product, request.user)
     total = 0
     total_with_discount = 0
     for bp in bp_qs:
@@ -178,7 +192,7 @@ def product_delete(request, pk):
         bucket__user=request.user).select_related('product')
 
     for elem in bp_qs:
-        elem.product = get_sales(elem.product)
+        elem.product = get_sales(elem.product, request.user)
     total = 0
     total_with_discount = 0
     for bp in bp_qs:
