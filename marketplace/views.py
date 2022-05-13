@@ -14,7 +14,7 @@ from rest_framework import viewsets
 from rest_framework import permissions
 from .serializers import CategorySerializer, ProductSerializer, \
     BucketProductSerializer, BucketProductAddSerializer, \
-    BucketProductUpdateProduct
+    BucketProductUpdateProduct, ProductWriteSerializer
 from django.db.models import Q
 
 
@@ -74,6 +74,17 @@ class CategoryViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
+    def create(self, request, *args, **kwargs):
+        if request.user.is_staff:
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+        return Response(status=status.HTTP_403_FORBIDDEN)
+
+
 
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
@@ -95,6 +106,17 @@ class ProductViewSet(viewsets.ModelViewSet):
         instance = get_sales(instance, request.user)
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
+
+    def create(self, request, *args, **kwargs):
+        self.serializer_class = ProductWriteSerializer
+        if request.user.is_staff:
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+        return Response(status=status.HTTP_403_FORBIDDEN)
 
 
 @api_view(['GET'])

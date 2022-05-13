@@ -3,6 +3,8 @@ from .models import Category, Product, Bucket, BucketProduct, Sale
 
 
 class CategorySerializer(serializers.ModelSerializer):
+
+
     class Meta:
         model = Category
         fields = ['id', 'name', 'parent']
@@ -13,6 +15,12 @@ class SaleSerializer(serializers.ModelSerializer):
         model = Sale
         fields = ['id', 'name', 'discount']
 
+    def validate_discount(self, discount):
+        if discount > 100 or discount < 0:
+            raise serializers.ValidationError('discount must be from 0 to 100')
+        return discount
+
+
 
 class ProductSerializer(serializers.ModelSerializer):
     categories = serializers.SlugRelatedField(
@@ -20,13 +28,28 @@ class ProductSerializer(serializers.ModelSerializer):
         read_only=True,
         slug_field='name'
     )
-    best_sale = SaleSerializer()
-    price_with_discount = serializers.DecimalField(max_digits=8, decimal_places=2)
+    best_sale = SaleSerializer(required=False)
+    price_with_discount = serializers.DecimalField(required=False, max_digits=8, decimal_places=2)
 
     class Meta:
         model = Product
         fields = ['id', 'name', 'price', 'description', 'categories',
                   'price_with_discount', 'best_sale']
+
+    def validate_price(self, price):
+        if price < 0:
+            raise serializers.ValidationError('Price must be grater than 0')
+        return price
+
+class ProductWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = ['name', 'price', 'description', 'categories']
+
+    def validate_price(self, price):
+        if price < 0:
+            raise serializers.ValidationError('Price must be grater than 0')
+        return price
 
 
 class BucketProductSerializer(serializers.ModelSerializer):
