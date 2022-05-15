@@ -41,6 +41,7 @@ class ProductSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('Price must be grater than 0')
         return price
 
+
 class ProductWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product

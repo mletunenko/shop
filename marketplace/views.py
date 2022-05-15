@@ -81,10 +81,23 @@ class CategoryViewSet(viewsets.ModelViewSet):
             self.perform_create(serializer)
             headers = self.get_success_headers(serializer.data)
             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-
         return Response(status=status.HTTP_403_FORBIDDEN)
 
+    def update(self, request, *args, **kwargs):
+        if request.user.is_staff:
+            partial = kwargs.pop('partial', False)
+            instance = self.get_object()
+            serializer = self.get_serializer(instance, data=request.data, partial=partial)
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
 
+            if getattr(instance, '_prefetched_objects_cache', None):
+                # If 'prefetch_related' has been applied to a queryset, we need to
+                # forcibly invalidate the prefetch cache on the instance.
+                instance._prefetched_objects_cache = {}
+
+            return Response(serializer.data)
+        return Response(status=status.HTTP_403_FORBIDDEN)
 
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all()
@@ -108,16 +121,14 @@ class ProductViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
-        self.serializer_class = ProductWriteSerializer
         if request.user.is_staff:
-            serializer = self.get_serializer(data=request.data)
+            serializer = ProductWriteSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             self.perform_create(serializer)
             headers = self.get_success_headers(serializer.data)
             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
         return Response(status=status.HTTP_403_FORBIDDEN)
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -145,7 +156,6 @@ def bucket_total(request):
         'products': serializer.data,
     }
     return Response(response_data)
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -175,7 +185,6 @@ def bucketproduct_add(request):
 
     return Response(response_data, status=status.HTTP_200_OK)
 
-
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def product_update(request, pk):
@@ -201,7 +210,6 @@ def product_update(request, pk):
     }
 
     return Response(response_data, status=status.HTTP_200_OK)
-
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])

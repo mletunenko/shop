@@ -6,7 +6,7 @@ from factory.django import DjangoModelFactory
 from factory import Faker, Sequence
 from django.urls import reverse
 
-from django.test import TestCase
+from rest_framework.test import APITestCase
 from django.utils import timezone
 
 from marketplace.models import Category, Product, Bucket, BucketProduct, Sale
@@ -55,63 +55,28 @@ class SaleFactory(DjangoModelFactory):
     discount = 15
 
 
-class ProductViewSetTests(TestCase):
-
-    def test_get_product_list(self):
-        response = self.client.get(reverse('product-list'))
-        self.assertEqual(response.status_code, 200)
-
-    def test_normal_product(self):
-        test_category = CategoryFactory()
-        data = {
-            'name': 'test_product1',
-            'price': 100,
-            'description': 'short description',
-            'categories': [
-                test_category.id
-            ]
-        }
-        user = StaffUserFactory()
-        self.client.force_login(user)
-        response = self.client.post(reverse('product-list'), data=data)
-        self.assertEqual(response.status_code, 201)
-
-    def test_negative_price_product(self):
-        test_category = CategoryFactory()
-        data = {
-            'name': 'test_product3',
-            'price': -100,
-            'description': 'short description',
-            'categories': [
-                test_category.id
-            ]
-        }
-        user = StaffUserFactory()
-        self.client.force_login(user)
-        response = self.client.post(reverse('product-list'), data=data)
-        self.assertEqual(response.status_code, 400)
-
-    def test_forbiden_user(self):
-        test_category = CategoryFactory()
-        data = {
-            'name': 'test_product3',
-            'price': 100,
-            'description': 'short description',
-            'categories': [
-                test_category.id
-            ]
-        }
-        user = UserFactory()
-        self.client.force_login(user)
-        response = self.client.post(reverse('product-list'), data=data)
-        self.assertEqual(response.status_code, 403)
-
-class CategoryViewSetTests(TestCase):
-    def test_get_category_list_unaythorized_user(self):
+class CategoryViewSetTests(APITestCase):
+    def test_get_category_list_unauthorized_user(self):
         response = self.client.get(reverse('category-list'))
         self.assertEqual(response.status_code, 200)
 
-    def test_post_category_list_unaythorized_user(self):
+    def test_post_category_list_unauthorized_user(self):
+        data = {
+            'name': 'test_category',
+            'parent': ''
+        }
+        response = self.client.post(reverse('category-list'), data=data)
+        self.assertEqual(response.status_code, 403)
+
+    def test_get_category_list_authorized_user(self):
+        user = UserFactory()
+        self.client.force_login(user)
+        response = self.client.get(reverse('category-list'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_post_category_list_authorized_user(self):
+        user = UserFactory()
+        self.client.force_login(user)
         data = {
             'name': 'test_category',
             'parent': ''
@@ -125,5 +90,211 @@ class CategoryViewSetTests(TestCase):
         response = self.client.get(reverse('category-list'))
         self.assertEqual(response.status_code, 200)
 
+    def test_post_category_list_staff_user_no_parent(self):
+        data = {
+            'name': 'test_category',
+            'parent': ''
+        }
+        user = StaffUserFactory()
+        self.client.force_login(user)
+        response = self.client.post(reverse('category-list'), data=data)
+        self.assertEqual(response.status_code, 201)
+
+    def test_post_category_list_staff_user_with_parent(self):
+        parent_category = CategoryFactory()
+        data = {
+            'name': 'test_category',
+            'parent': parent_category.id
+        }
+        user = StaffUserFactory()
+        self.client.force_login(user)
+        response = self.client.post(reverse('category-list'), data=data)
+        self.assertEqual(response.status_code, 201)
+
+    def test_get_category_detail_unauthorized_user(self):
+        """
+        category {id} tests
+        """
+        category = CategoryFactory()
+        response = self.client.get(reverse('category-detail', args=(category.id,)))
+        self.assertEqual(response.status_code, 200)
+
+    def test_get_category_detail_authorized_user(self):
+        user = UserFactory()
+        self.client.force_login(user)
+        category = CategoryFactory()
+        response = self.client.get(reverse('category-detail', args=(category.id,)))
+        self.assertEqual(response.status_code, 200)
+
+    def test_get_category_detail_staff_user(self):
+        user = StaffUserFactory()
+        self.client.force_login(user)
+        category = CategoryFactory()
+        response = self.client.get(reverse('category-detail', args=(category.id,)))
+        self.assertEqual(response.status_code, 200)
+
+    def test_put_category_detail_unauthorized_user(self):
+        category = CategoryFactory()
+        data = {
+            "name": "New test category",
+            "parent": ''
+        }
+        response = self.client.put(reverse('category-detail', args=(category.id,)), data=data)
+        self.assertEqual(response.status_code, 403)
+
+    def test_put_category_detail_authorized_user(self):
+        user = UserFactory()
+        self.client.force_login(user)
+        category = CategoryFactory()
+        data = {
+            "name": "New test category",
+            "parent": ''
+        }
+        response = self.client.put(reverse('category-detail', args=(category.id,)), data=data)
+        self.assertEqual(response.status_code, 403)
+
+    def test_put_category_detail_staff_user(self):
+        user = StaffUserFactory()
+        self.client.force_login(user)
+        category = CategoryFactory()
+        data = {
+            "name": "New test category",
+            "parent": ''
+        }
+        response = self.client.put(reverse('category-detail', args=(category.id,)), data=data)
+        self.assertEqual(response.status_code, 200)
+
+    def test_put_category_detail_staff_user_partial(self):
+        user = StaffUserFactory()
+        self.client.force_login(user)
+        parent = CategoryFactory()
+        category = CategoryFactory()
+        data = {
+            "parent": [parent.id]
+        }
+        response = self.client.put(reverse('category-detail', args=(category.id,)), data=data)
+        self.assertEqual(response.status_code, 400)
+
+    def test_patch_category_detail_unauthorized_user(self):
+        category = CategoryFactory()
+        data = {
+            "name": "New test"
+        }
+        response = self.client.patch(reverse('category-detail', args=(category.id,)), data=data)
+        self.assertEqual(response.status_code, 403)
+
+    def test_patch_category_detail_authorized_user(self):
+        user = UserFactory()
+        self.client.force_login(user)
+        category = CategoryFactory()
+        data = {
+            "name": "New test"
+        }
+        response = self.client.put(reverse('category-detail', args=(category.id,)), data=data)
+        self.assertEqual(response.status_code, 403)
+
+    def test_patch_category_detail_staff_user(self):
+        user = StaffUserFactory()
+        self.client.force_login(user)
+        parent = CategoryFactory()
+        category = CategoryFactory()
+        data = {
+            "parent": [parent.id]
+        }
+        response = self.client.patch(reverse('category-detail', args=(category.id,)), data=data)
+        self.assertEqual(response.status_code, 200)
+
+
+class ProductViewSetTests(APITestCase):
+    def test_get_product_list_unauthorized_user(self):
+        response = self.client.get(reverse('product-list'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_get_product_list_authorized_user(self):
+        user = UserFactory()
+        self.client.force_login(user)
+        response = self.client.get(reverse('product-list'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_post_product_list_unauthorized_user(self):
+        data = {
+            "name": "product",
+            "price": 100,
+            "description": "short description"
+        }
+        response = self.client.post(reverse('product-list'), data=data)
+        self.assertEqual(response.status_code, 403)
+
+    def test_post_product_list_authorized_user(self):
+        user = UserFactory()
+        self.client.force_login(user)
+        data = {
+            "name": "product",
+            "price": 100,
+            "description": "short description"
+        }
+        response = self.client.post(reverse('product-list'), data=data)
+        self.assertEqual(response.status_code, 403)
+
+    def test_post_product_list_staff_user(self):
+        user = StaffUserFactory()
+        category = CategoryFactory()
+        self.client.force_login(user)
+        data = {
+            "name": "product",
+            "price": 100,
+            "description": "short description",
+            'categories': [
+                category.id
+            ]
+
+        }
+        response = self.client.post(reverse('product-list'), data=data)
+        self.assertEqual(response.status_code, 201)
+
+    def test_post_product_list_negative_price(self):
+        user = StaffUserFactory()
+        category = CategoryFactory()
+        self.client.force_login(user)
+        data = {
+            "name": "product",
+            "price": -100,
+            "description": "short description",
+            'categories': [
+                category.id
+            ]
+
+        }
+        response = self.client.post(reverse('product-list'), data=data)
+        self.assertEqual(response.status_code, 400)
+
+    def test_post_product_list_partial(self):
+        user = StaffUserFactory()
+        category = CategoryFactory()
+        self.client.force_login(user)
+        data = {
+            "name": "product",
+            "price": 100,
+            "description": "short description"
+
+        }
+        response = self.client.post(reverse('product-list'), data=data)
+        self.assertEqual(response.status_code, 400)
+
+    def test_post_product_list_decimal_places(self):
+        user = StaffUserFactory()
+        category = CategoryFactory()
+        self.client.force_login(user)
+        data = {
+            "name": "product",
+            "price": 23.1233,
+            "description": "short description",
+            'categories': [
+                category.id
+            ]
+
+        }
+        response = self.client.post(reverse('product-list'), data=data)
+        self.assertEqual(response.status_code, 400)
 
 
