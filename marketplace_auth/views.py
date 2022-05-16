@@ -4,6 +4,7 @@ from rest_framework.response import Response
 
 from marketplace_auth.serializer import UserSerializer
 from django.contrib.auth import authenticate, login, logout
+from marketplace.serializers import BucketSerializer
 
 
 @api_view(['POST'])
@@ -14,6 +15,7 @@ def user_registration(request):
     serializer.save()
     serializer.instance.set_password(data['password'])
     serializer.instance.save()
+
     return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 

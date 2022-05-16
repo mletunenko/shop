@@ -18,6 +18,24 @@ from .serializers import CategorySerializer, ProductSerializer, \
 from django.db.models import Q
 
 
+def get_bucket_view_data(query_set, user, serializer):
+    for elem in query_set:
+        elem.product = get_sales(elem.product, user)
+    total = 0
+    total_with_discount = 0
+    for elem in query_set:
+        total += elem.number * elem.product.price
+        total_with_discount += elem.number * elem.product.price_with_discount
+
+    data = {
+        'total': total,
+        'total_with_discount': total_with_discount,
+        'products': serializer.data,
+    }
+
+    return data
+
+
 def sale_is_open(sale):
     no_users = sale.users.values_list('id', flat=True) is []
     no_groups = sale.groups.values_list('id', flat=True) is []
@@ -69,8 +87,6 @@ class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
-
-
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance)
@@ -107,7 +123,6 @@ class CategoryViewSet(viewsets.ModelViewSet):
             instance.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response(status=status.HTTP_403_FORBIDDEN)
-
 
 
 class ProductViewSet(viewsets.ModelViewSet):
@@ -177,39 +192,28 @@ class ProductViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         return Response(status=status.HTTP_403_FORBIDDEN)
 
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def bucket_total(request):
     """
     List all product in bucket of authorized user
     """
-
     bp_qs = BucketProduct.objects.filter(
         bucket__user=request.user).select_related('product')
-    for elem in bp_qs:
-        elem.product = get_sales(elem.product, request.user)
-
     serializer = BucketProductSerializer(bp_qs, many=True)
-
-    total = 0
-    total_with_discount = 0
-    for bp in bp_qs:
-        total += bp.number * bp.product.price
-        total_with_discount += bp.number * bp.product.price_with_discount
-
-    response_data = {
-        'total': total,
-        'total_with_discount': total_with_discount,
-        'products': serializer.data,
-    }
+    response_data = get_bucket_view_data(bp_qs, request.user, serializer)
     return Response(response_data)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def bucketproduct_add(request):
     data = request.data
+    data._mutable = True
     data['product_id'] = data['id']
     data['bucket_id'] = Bucket.objects.get(user=request.user).id
+    data._mutable = False
 
     serializer = BucketProductAddSerializer(data=data)
     serializer.is_valid(True)
@@ -217,20 +221,10 @@ def bucketproduct_add(request):
 
     bp_qs = BucketProduct.objects.filter(
         bucket__user=request.user).select_related('product')
-    for elem in bp_qs:
-        elem.product = get_sales(elem.product, request.user)
-    total = 0
-    total_with_discount = 0
-    for bp in bp_qs:
-        total += bp.number * bp.product.price
-        total_with_discount += bp.number * bp.product.price_with_discount
-    response_data = {
-        'total': total,
-        'total_with_discount': total_with_discount,
-
-    }
+    response_data = get_bucket_view_data(bp_qs, request.user, serializer)
 
     return Response(response_data, status=status.HTTP_200_OK)
+
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
@@ -243,20 +237,10 @@ def product_update(request, pk):
 
     bp_qs = BucketProduct.objects.filter(
         bucket__user=request.user).select_related('product')
-    for elem in bp_qs:
-        elem.product = get_sales(elem.product, request.user)
-    total = 0
-    total_with_discount = 0
-    for bp in bp_qs:
-        total += bp.number * bp.product.price
-        total_with_discount += bp.number * bp.product.price_with_discount
-    response_data = {
-        'total': total,
-        'total_with_discount': total_with_discount,
-
-    }
+    response_data = get_bucket_view_data(bp_qs, request.user)
 
     return Response(response_data, status=status.HTTP_200_OK)
+
 
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])

@@ -431,6 +431,7 @@ class ProductViewSetTests(APITestCase):
 class BucketViewSetTests(APITestCase):
 
     bucket_url = '/bucket/'
+    bucket_add_url = '/bucket/add'
 
     def test_get_bucket_unauth_user(self):
         response = self.client.get(self.bucket_url)
@@ -441,3 +442,17 @@ class BucketViewSetTests(APITestCase):
         self.client.force_login(user)
         response = self.client.get(self.bucket_url)
         self.assertEqual(response.status_code, 200)
+
+    def test_post_bucket_add_auth_user(self):
+        user = UserFactory()
+        self.client.force_login(user)
+        a = [1]
+        product = ProductFactory()
+        data = {
+            "id": product.id,
+            "number": 2
+        }
+        response = self.client.post(self.bucket_add_url, data)
+        self.assertEqual(response.status_code, 200)
+
+

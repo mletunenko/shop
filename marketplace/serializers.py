@@ -3,8 +3,6 @@ from .models import Category, Product, Bucket, BucketProduct, Sale
 
 
 class CategorySerializer(serializers.ModelSerializer):
-
-
     class Meta:
         model = Category
         fields = ['id', 'name', 'parent']
@@ -19,7 +17,6 @@ class SaleSerializer(serializers.ModelSerializer):
         if discount > 100 or discount < 0:
             raise serializers.ValidationError('discount must be from 0 to 100')
         return discount
-
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -103,3 +100,8 @@ class BucketProductUpdateProduct(serializers.ModelSerializer):
     class Meta:
         model = BucketProduct
         fields = ['number']
+
+class BucketSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Bucket
+        fields = ['user']
