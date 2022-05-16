@@ -1,3 +1,4 @@
+# TODO test deletion permissions Category and Product
 import datetime
 import os
 
@@ -297,4 +298,146 @@ class ProductViewSetTests(APITestCase):
         response = self.client.post(reverse('product-list'), data=data)
         self.assertEqual(response.status_code, 400)
 
+    def test_get_product_detail_unauth_user(self):
+        product = ProductFactory()
+        response = self.client.get(reverse('product-detail', args=(product.id,)))
+        self.assertEqual(response.status_code, 200)
 
+    def test_get_product_detail_auth_user(self):
+        user = UserFactory()
+        self.client.force_login(user)
+        product = ProductFactory()
+        response = self.client.get(reverse('product-detail', args=(product.id,)))
+        self.assertEqual(response.status_code, 200)
+
+    def test_get_product_detail_staff_user(self):
+        user = StaffUserFactory()
+        self.client.force_login(user)
+        product = ProductFactory()
+        response = self.client.get(reverse('product-detail', args=(product.id,)))
+        self.assertEqual(response.status_code, 200)
+
+    def test_put_product_detail_unauth_user(self):
+        product = ProductFactory()
+        data = {}
+        response = self.client.put(reverse('product-detail', args=(product.id,)), data=data)
+        self.assertEqual(response.status_code, 403)
+
+    def test_put_product_detail_auth_user(self):
+        user = UserFactory()
+        self.client.force_login(user)
+        product = ProductFactory()
+        data = {}
+        response = self.client.put(reverse('product-detail', args=(product.id,)), data=data)
+        self.assertEqual(response.status_code, 403)
+
+    def test_put_product_detail_staff_user(self):
+        user = StaffUserFactory()
+        self.client.force_login(user)
+        category = CategoryFactory()
+        product = ProductFactory()
+        product.categories.add(category)
+        data = {
+            'name': "New name",
+            'price': product.price,
+            'description': product.description,
+            'category': product.categories
+        }
+        response = self.client.put(reverse('product-detail', args=(product.id,)), data=data)
+        self.assertEqual(response.status_code, 200)
+
+    def test_put_product_detail_staff_user_partial(self):
+        user = StaffUserFactory()
+        self.client.force_login(user)
+        category = CategoryFactory()
+        product = ProductFactory()
+        product.categories.add(category)
+        data = {
+            'name': "New name",
+            'category': product.categories
+        }
+        response = self.client.put(reverse('product-detail', args=(product.id,)), data=data)
+        self.assertEqual(response.status_code, 400)
+
+    def test_patch_product_detail_unauth_user(self):
+        category = CategoryFactory()
+        product = ProductFactory()
+        product.categories.add(category)
+        data = {
+            'name': "New name",
+            'category': product.categories
+        }
+        response = self.client.patch(reverse('product-detail', args=(product.id,)), data=data)
+        self.assertEqual(response.status_code, 403)
+
+    def test_patch_product_detail_unauth_user(self):
+        user = UserFactory()
+        self.client.force_login(user)
+        category = CategoryFactory()
+        product = ProductFactory()
+        product.categories.add(category)
+        data = {
+            'name': "New name",
+            'category': product.categories
+        }
+        response = self.client.patch(reverse('product-detail', args=(product.id,)), data=data)
+        self.assertEqual(response.status_code, 403)
+
+    def test_patch_product_detail_staff_user(self):
+        user = StaffUserFactory()
+        self.client.force_login(user)
+        category = CategoryFactory()
+        product = ProductFactory()
+        product.categories.add(category)
+        data = {
+            'name': "New name",
+            'category': product.categories
+        }
+        response = self.client.patch(reverse('product-detail', args=(product.id,)), data=data)
+        self.assertEqual(response.status_code, 200)
+
+    def test_patch_product_detail_staff_user_negative_price(self):
+        user = StaffUserFactory()
+        self.client.force_login(user)
+        category = CategoryFactory()
+        product = ProductFactory()
+        product.categories.add(category)
+        data = {
+            'price': -10
+        }
+        response = self.client.patch(reverse('product-detail', args=(product.id,)), data=data)
+        self.assertEqual(response.status_code, 400)
+
+    def test_delete_product_detail_unauth_user(self):
+        product = ProductFactory()
+        response = self.client.patch(reverse('product-detail', args=(product.id,)))
+        self.assertEqual(response.status_code, 403)
+
+    def test_delete_product_detail_auth_user(self):
+        user = UserFactory()
+        self.client.force_login(user)
+        product = ProductFactory()
+        response = self.client.patch(reverse('product-detail', args=(product.id,)))
+        self.assertEqual(response.status_code, 403)
+
+    def test_delete_product_detail_auth_user(self):
+        user = StaffUserFactory()
+        self.client.force_login(user)
+        product = ProductFactory()
+        response = self.client.patch(reverse('product-detail', args=(product.id,)))
+        self.assertEqual(response.status_code, 200)
+
+
+class BucketViewSetTests(APITestCase):
+
+    bucket_url = '/bucket/'
+
+    def test_get_bucket_unauth_user(self):
+        response = self.client.get(self.bucket_url)
+        self.assertEqual(response.status_code, 401)
+
+    def test_get_bucket_auth_user(self):
+        user = UserFactory()
+        self.client.force_login(user)
+        response = self.client.get(self.bucket_url)
+        self.assertEqual(response.status_code, 200)
