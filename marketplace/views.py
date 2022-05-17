@@ -267,3 +267,15 @@ def product_delete(request, pk):
     response_data = get_bucket_view_data(bp_qs, request.user, serializer)
 
     return Response(response_data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_product(request):
+    bp_qs = BucketProduct.objects.filter(
+        bucket__user=request.user).select_related('product')
+    serializer = BucketProductSerializer(bp_qs, many=True)
+
+
+    response_data = get_bucket_view_data(bp_qs, request.user, serializer)
+    return Response(response_data)

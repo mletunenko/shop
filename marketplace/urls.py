@@ -9,6 +9,8 @@ urlpatterns = [
     path('bucket/add', views.bucketproduct_add),
     path('bucket/<int:pk>/update', views.product_update),
     path('bucket/<int:pk>', views.product_delete),
+    path('create-order', views.create_product),
+
 ]
 router = SimpleRouter()
 router.register(r'category', CategoryViewSet, basename='category')

@@ -44,7 +44,8 @@ True доступны запросы GET и POST. Для создания экз
     data = {
         "name": name,
         "price": price,
-        "description": description
+        "description": description,
+        "available_items": available_items,
     }
 
 _product/?categories={category_1.id, category_2.id}_
@@ -101,3 +102,13 @@ _registration/_
         "email": email,
         "password": password
     }
+
+### Order
+
+Модель Order представляет заказ, который формируется из корзины пользователя.
+
+_/create-order_
+
+Реализован API для создания Заказа посредством POST запроса.
+
+

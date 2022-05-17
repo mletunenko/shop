@@ -26,7 +26,6 @@ class Product(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
 
-
     def __str__(self):
         return self.name
 
@@ -60,3 +59,15 @@ class Sale(models.Model):
     categories = models.ManyToManyField(Category, blank=True)
     users = models.ManyToManyField(User, blank=True)
     groups = models.ManyToManyField(Group, blank=True)
+
+
+class Order(models.Model):
+    user = models.ForeignKey(User)
+    products = models.ManyToManyField(Product, through='OrderProduct')
+
+
+class OrderProduct(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    price = models.DecimalField(max_digits=8, decimal_places=2)
+    amount = models.IntegerField()

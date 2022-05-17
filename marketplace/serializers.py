@@ -76,13 +76,6 @@ class BucketProductAddSerializer(serializers.ModelSerializer):
                 f"No product id={product_id} in catalog")
         return product_id
 
-    def validate_number(self, number):
-        if number < 1:
-            raise serializers.ValidationError("Number is less then one")
-        elif number > 100:
-            raise serializers.ValidationError("Number is more then 100")
-        return number
-
     class Meta:
         model = BucketProduct
         fields = ['number', 'bucket_id', 'product_id']
@@ -99,13 +92,6 @@ class BucketProductUpdateProduct(serializers.ModelSerializer):
     class Meta:
         model = BucketProduct
         fields = ['number']
-
-    def validate_number(self, number):
-        if number < 1:
-            raise serializers.ValidationError("Number is less then one")
-        elif number > 100:
-            raise serializers.ValidationError("Number is more then 100")
-        return number
 
 
 class BucketSerializer(serializers.ModelSerializer):
