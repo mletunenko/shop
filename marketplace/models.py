@@ -1,5 +1,6 @@
 import datetime
 from django.contrib import admin
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User, Group
@@ -20,9 +21,11 @@ class Product(models.Model):
     name = models.CharField(max_length=50)
     price = models.DecimalField(max_digits=8, decimal_places=2)
     description = models.TextField()
+    available_items = models.IntegerField(validators=[MinValueValidator(limit_value=0)])
     categories = models.ManyToManyField(Category)
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
+
 
     def __str__(self):
         return self.name

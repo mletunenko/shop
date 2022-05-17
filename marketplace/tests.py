@@ -1,4 +1,5 @@
 # TODO test deletion permissions Category and Product
+# TODO test available items product field
 
 
 import factory
@@ -43,6 +44,7 @@ class ProductFactory(DjangoModelFactory):
     name = Faker('first_name')
     price = 100
     description = 'Some short description'
+    available_items = Faker().unique.random_int()
 
 
 class SaleFactory(DjangoModelFactory):
@@ -274,7 +276,8 @@ class ProductViewSetTests(APITestCase):
         data = {
             "name": "product",
             "price": 100,
-            "description": "short description"
+            "description": "short description",
+            "available_items": 13
 
         }
         response = self.client.post(reverse('product-list'), data=data)
@@ -288,6 +291,7 @@ class ProductViewSetTests(APITestCase):
             "name": "product",
             "price": 23.1233,
             "description": "short description",
+            "available_items": 13,
             'categories': [
                 category.id
             ]
@@ -339,6 +343,7 @@ class ProductViewSetTests(APITestCase):
             'name': "New name",
             'price': product.price,
             'description': product.description,
+            "available_items": 13,
             'category': product.categories
         }
         response = self.client.put(reverse('product-detail', args=(product.id,)), data=data)
@@ -376,7 +381,8 @@ class ProductViewSetTests(APITestCase):
         product.categories.add(category)
         data = {
             'name': "New name",
-            'category': product.categories
+            'category': product.categories,
+            "available_items": 13
         }
         response = self.client.patch(reverse('product-detail', args=(product.id,)), data=data)
         self.assertEqual(response.status_code, 403)

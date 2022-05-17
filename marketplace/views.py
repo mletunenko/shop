@@ -219,6 +219,10 @@ def bucketproduct_add(request):
     if bp_qs.filter(product__id=data['product_id']).exists():
         return Response('Product already exists in bucket', status=status.HTTP_400_BAD_REQUEST)
 
+    added_product = Product.objects.get(id=data['product_id'])
+    if data['number'] > added_product.available_items:
+        return Response(f'Only {added_product.available_items} items available for order', status=status.HTTP_400_BAD_REQUEST)
+
     serializer = BucketProductAddSerializer(data=data)
     serializer.is_valid(True)
     serializer.save()
@@ -233,6 +237,11 @@ def bucketproduct_add(request):
 @permission_classes([IsAuthenticated])
 def product_update(request, pk):
     data = request.data
+
+    added_product = Product.objects.get(id=pk)
+    if data['number'] > added_product.available_items:
+        return Response(f'Only {added_product.available_items} items available for order', status=status.HTTP_400_BAD_REQUEST)
+
     instance = BucketProduct.objects.get(product_id=pk, bucket_id=Bucket.objects.get(user=request.user).id)
     serializer = BucketProductUpdateProduct(instance, data=data)
     serializer.is_valid(True)
