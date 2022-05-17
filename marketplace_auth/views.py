@@ -15,7 +15,6 @@ def user_registration(request):
     serializer.save()
     serializer.instance.set_password(data['password'])
     serializer.instance.save()
-
     return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 

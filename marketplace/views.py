@@ -209,18 +209,21 @@ def bucket_total(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def bucketproduct_add(request):
-    data = request.data
-    data._mutable = True
-    data['product_id'] = data['id']
+    input_data = request.data
+    data = {}
+    data['product_id'] = input_data['id']
     data['bucket_id'] = Bucket.objects.get(user=request.user).id
-    data._mutable = False
+    data['number'] = input_data['number']
+
+    bp_qs = BucketProduct.objects.filter(bucket__user=request.user).select_related('product')
+    if bp_qs.filter(product__id=data['product_id']).exists():
+        return Response('Product already exists in bucket', status=status.HTTP_400_BAD_REQUEST)
 
     serializer = BucketProductAddSerializer(data=data)
     serializer.is_valid(True)
     serializer.save()
 
-    bp_qs = BucketProduct.objects.filter(
-        bucket__user=request.user).select_related('product')
+    bp_qs = BucketProduct.objects.filter(bucket__user=request.user).select_related('product')
     response_data = get_bucket_view_data(bp_qs, request.user, serializer)
 
     return Response(response_data, status=status.HTTP_200_OK)
@@ -235,9 +238,8 @@ def product_update(request, pk):
     serializer.is_valid(True)
     serializer.save()
 
-    bp_qs = BucketProduct.objects.filter(
-        bucket__user=request.user).select_related('product')
-    response_data = get_bucket_view_data(bp_qs, request.user)
+    bp_qs = BucketProduct.objects.filter(bucket__user=request.user).select_related('product')
+    response_data = get_bucket_view_data(bp_qs, request.user, serializer)
 
     return Response(response_data, status=status.HTTP_200_OK)
 
@@ -245,6 +247,7 @@ def product_update(request, pk):
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def product_delete(request, pk):
+    serializer = BucketProductUpdateProduct()
     product = BucketProduct.objects.get(product_id=pk,
                                         bucket_id=Bucket.objects.get(
                                             user=request.user).id)
@@ -252,17 +255,6 @@ def product_delete(request, pk):
     bp_qs = BucketProduct.objects.filter(
         bucket__user=request.user).select_related('product')
 
-    for elem in bp_qs:
-        elem.product = get_sales(elem.product, request.user)
-    total = 0
-    total_with_discount = 0
-    for bp in bp_qs:
-        total += bp.number * bp.product.price
-        total_with_discount += bp.number * bp.product.price_with_discount
-    response_data = {
-        'total': total,
-        'total_with_discount': total_with_discount,
-
-    }
+    response_data = get_bucket_view_data(bp_qs, request.user, serializer)
 
     return Response(response_data, status=status.HTTP_200_OK)

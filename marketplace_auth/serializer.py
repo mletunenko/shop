@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-# from marketplace.models import Buck
+# from marketplace.models import Bucket
 #
 #
 # class CategorySerializer(serializers.ModelSerializer):

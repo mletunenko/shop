@@ -1,6 +1,5 @@
 # TODO test deletion permissions Category and Product
-import datetime
-import os
+
 
 import factory
 from factory.django import DjangoModelFactory
@@ -10,9 +9,9 @@ from django.urls import reverse
 from rest_framework.test import APITestCase
 from django.utils import timezone
 
-from marketplace.models import Category, Product, Bucket, BucketProduct, Sale
+from marketplace.models import Category, Product
 from django.contrib.auth.models import User
-import marketplace.views
+
 
 
 class CategoryFactory(DjangoModelFactory):
@@ -26,7 +25,6 @@ class CategoryFactory(DjangoModelFactory):
 class UserFactory(DjangoModelFactory):
     class Meta:
         model = User
-        # database = 'shop'
 
     username = Faker('last_name')
     first_name = Faker('first_name')
@@ -429,13 +427,12 @@ class ProductViewSetTests(APITestCase):
 
 
 class BucketViewSetTests(APITestCase):
-
     bucket_url = '/bucket/'
     bucket_add_url = '/bucket/add'
 
     def test_get_bucket_unauth_user(self):
         response = self.client.get(self.bucket_url)
-        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.status_code, 403)
 
     def test_get_bucket_auth_user(self):
         user = UserFactory()
@@ -446,7 +443,6 @@ class BucketViewSetTests(APITestCase):
     def test_post_bucket_add_auth_user(self):
         user = UserFactory()
         self.client.force_login(user)
-        a = [1]
         product = ProductFactory()
         data = {
             "id": product.id,
@@ -454,5 +450,56 @@ class BucketViewSetTests(APITestCase):
         }
         response = self.client.post(self.bucket_add_url, data)
         self.assertEqual(response.status_code, 200)
+
+    def test_post_bucket_add_auth_user_negavite_amount(self):
+        user = UserFactory()
+        self.client.force_login(user)
+        product = ProductFactory()
+        data = {
+            "id": product.id,
+            "number": -2
+        }
+        response = self.client.post(self.bucket_add_url, data)
+        self.assertEqual(response.status_code, 400)
+
+    def test_post_bucket_add_double(self):
+        user = UserFactory()
+        self.client.force_login(user)
+        product = ProductFactory()
+        data = {
+            "id": product.id,
+            "number": 2
+        }
+        self.client.post(self.bucket_add_url, data)
+        response = self.client.post(self.bucket_add_url, data)
+        self.assertEqual(response.status_code, 400)
+
+    def test_put_bucket_update_negavite_amount(self):
+        user = UserFactory()
+        self.client.force_login(user)
+        product = ProductFactory()
+        data = {
+            "id": product.id,
+            "number": 2
+        }
+        self.client.post(self.bucket_add_url, data)
+        data = {
+            "number": -3
+        }
+        response = self.client.put(f'/bucket/{product.id}/update', data)
+        self.assertEqual(response.status_code, 400)
+
+    def test_delete_bucket_product(self):
+        user = UserFactory()
+        self.client.force_login(user)
+        product = ProductFactory()
+        data = {
+            "id": product.id,
+            "number": 2
+        }
+        self.client.post(self.bucket_add_url, data)
+        response = self.client.delete(f'/bucket/{product.id}')
+        self.assertEqual(response.status_code, 200)
+
 
 

@@ -101,6 +101,14 @@ class BucketProductUpdateProduct(serializers.ModelSerializer):
         model = BucketProduct
         fields = ['number']
 
+    def validate_number(self, number):
+        if number < 1:
+            raise serializers.ValidationError("Number is less then one")
+        elif number > 100:
+            raise serializers.ValidationError("Number is more then 100")
+        return number
+
+
 class BucketSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bucket
