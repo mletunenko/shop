@@ -7,14 +7,13 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from marketplace.models import Category, Bucket, BucketProduct
+from marketplace.models import Category, Bucket, BucketProduct, Order, OrderProduct
 from marketplace.serializers import CategorySerializer
 from marketplace.models import Category, Product, Sale
 from rest_framework import viewsets
 from rest_framework import permissions
-from .serializers import CategorySerializer, ProductSerializer, \
-    BucketProductSerializer, BucketProductAddSerializer, \
-    BucketProductUpdateProduct, ProductWriteSerializer
+from .serializers import CategorySerializer, ProductSerializer, BucketProductSerializer, BucketProductAddSerializer, \
+    BucketProductUpdateProduct, ProductWriteSerializer, OrderProductSerializer
 from django.db.models import Q
 
 
@@ -199,8 +198,7 @@ def bucket_total(request):
     """
     List all product in bucket of authorized user
     """
-    bp_qs = BucketProduct.objects.filter(
-        bucket__user=request.user).select_related('product')
+    bp_qs = BucketProduct.objects.filter(bucket__user=request.user).select_related('product')
     serializer = BucketProductSerializer(bp_qs, many=True)
     response_data = get_bucket_view_data(bp_qs, request.user, serializer)
     return Response(response_data)
@@ -271,11 +269,19 @@ def product_delete(request, pk):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
-def create_product(request):
-    bp_qs = BucketProduct.objects.filter(
-        bucket__user=request.user).select_related('product')
-    serializer = BucketProductSerializer(bp_qs, many=True)
+def create_order(request):
+    order = Order.objects.create(user=request.user)
+    bucket = Bucket
+    bucketproduct_qs = BucketProduct.objects.filter(bucket__user=request.user).select_related('product')
+    for elem in bucketproduct_qs:
+        elem.product = get_sales(elem.product, request.user)
 
-
-    response_data = get_bucket_view_data(bp_qs, request.user, serializer)
-    return Response(response_data)
+    for item in bucketproduct_qs:
+        OrderProduct.objects.create(order=order,
+                                    product=item.product,
+                                    price=item.product.price,
+                                    sale=item.product.best_sale,
+                                    price_with_discount=item.product.price_with_discount,
+                                    number=item.number)
+        item.delete()
+    return Response(status=status.HTTP_200_OK)

@@ -62,7 +62,8 @@ class Sale(models.Model):
 
 
 class Order(models.Model):
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    created = models.DateTimeField(auto_now_add=True)
     products = models.ManyToManyField(Product, through='OrderProduct')
 
 
@@ -70,4 +71,6 @@ class OrderProduct(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     price = models.DecimalField(max_digits=8, decimal_places=2)
-    amount = models.IntegerField()
+    sale = models.ForeignKey(Sale, blank=True, on_delete=models.CASCADE)
+    price_with_discount = models.DecimalField(max_digits=8, decimal_places=2)
+    number = models.IntegerField()

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Category, Product, Bucket, BucketProduct, Sale
+from .models import Category, Product, Bucket, BucketProduct, Sale, OrderProduct
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -98,3 +98,14 @@ class BucketSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bucket
         fields = ['user']
+
+
+class OrderProductSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(source='product_id')
+    name = serializers.CharField(source='product.name')
+    price = serializers.DecimalField(source='product.price', max_digits=8, decimal_places=2)
+    price_with_discount = serializers.DecimalField(source='product.price_with_discount', max_digits=8, decimal_places=2)
+
+    class Meta:
+        model = OrderProduct
+        fields = ['id', 'name', 'number', 'price', 'price_with_discount']
